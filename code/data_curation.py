@@ -3,6 +3,7 @@ from rdkit import Chem
 from pathlib import Path
 import numpy as np
 import os
+import argparse
 
 def num_molecule_to_csv(csv_path, dataset_name, number_name:str, value):
     if Path(csv_path).exists():
@@ -18,7 +19,7 @@ def num_molecule_to_csv(csv_path, dataset_name, number_name:str, value):
     return df.to_csv(csv_path, index = True)
 
 def invalid_mol_filter(base_path, dataset_name):
-    dataset = pd.read_csv(f'{base_path}/clean_dataset/{dataset_name}.csv')
+    dataset = pd.read_csv(f'{base_path}/molnet_dataset/{dataset_name}.csv')
     dataset_smiles = dataset['smiles']
     n_beginning = len(dataset)
 
@@ -40,7 +41,7 @@ def invalid_mol_filter(base_path, dataset_name):
     filtered_dataset.to_csv(f'{base_path}/filtered_invalid/{dataset_name}.csv', index=False)
     return filtered_dataset
 
-def drop_duplicate(base_path, dataset_name, task):
+def drop_replicate(base_path, dataset_name, task):
     dataset = pd.read_csv(f'{base_path}/filtered_invalid/{dataset_name}.csv')
     dataset['canonical_smiles'] = dataset['smiles'].apply(lambda x: Chem.MolToSmiles(Chem.MolFromSmiles(x)))
     replicate_index = dataset.index[dataset['canonical_smiles'].duplicated(keep=False)]
@@ -68,19 +69,19 @@ def drop_duplicate(base_path, dataset_name, task):
                     else:
                         to_drop.append(idx1)
                         to_drop.append(idx2)
-    n_filtered_duplicate = len(to_drop)
-    drop_duplicate_dataset = dataset.drop(to_drop, axis=0).drop(['canonical_smiles'], axis=1)
-    n_final = len(drop_duplicate_dataset)
+    n_filtered_replicate = len(to_drop)
+    drop_replicate_dataset = dataset.drop(to_drop, axis=0).drop(['canonical_smiles'], axis=1)
+    n_final = len(drop_replicate_dataset)
 
     csv_path = f'{base_path}/data_curation_summary.csv'
     os.makedirs(f'{base_path}/curated_dataset/', exist_ok=True)
 
     num_molecule_to_csv(csv_path,dataset_name,'n_replicate',n_replicate)
-    num_molecule_to_csv(csv_path, dataset_name, 'n_filtered_duplicate', n_filtered_duplicate)
+    num_molecule_to_csv(csv_path, dataset_name, 'n_filtered_replicate', n_filtered_replicate)
     num_molecule_to_csv(csv_path, dataset_name, 'n_final', n_final)
-    drop_duplicate_dataset.to_csv(f'{base_path}/curated_dataset/{dataset_name}.csv', index=False)
+    drop_replicate_dataset.to_csv(f'{base_path}/curated_dataset/{dataset_name}.csv', index=False)
 
-    return drop_duplicate_dataset
+    return drop_replicate_dataset
 
 def class_balance(base_path, dataset_name,task):
     if task == 'regression':
@@ -109,8 +110,12 @@ def class_balance(base_path, dataset_name,task):
     return avg_percent_positive
 
 if __name__ == '__main__':
-    base_path = '/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies/dataset'
-    classification_datasets = ['bace','bbbp','clintox','hiv','sider','tox21']
-    regression_datasets = ['delaney','freesolv','lipo']
-    for dataset_name in classification_datasets:
-        class_balance(base_path,dataset_name,'classification')
+    parser = argparse.ArgumentParser(description = 'Run Data Curation')
+    parser.add_argument('--dataset_name', type =str, required=True)
+    parser.add_argument('--base_path', type=str, required=True)
+    parser.add_argument('--task', type=str, required=True)
+    args = parser.parse_args()
+    
+    invalid_mol_filter(args.base_path, args.dataset_name)
+    drop_replicate(args.base_path, args.dataset_name, args.task)
+    class_balance(args.base_path, args.dataset_name, args.task)

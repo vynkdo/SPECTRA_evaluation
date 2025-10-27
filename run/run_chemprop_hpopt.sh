@@ -24,12 +24,10 @@ data_path=$project_dir/splits_data/hpopt/$current_dataset/data.csv
 splits_path=$project_dir/splits_data/hpopt/$current_dataset/data.json
 RAY_TEMP_DIR=$project_dir/ray/ray_temp
 
-mkdir -p slurm_logs/chemprop_hpopt/$current_dataset
-mkdir -p $results_dir
-mkdir -p $RAY_TEMP_DIR
-
 log_dir=slurm_logs/chemprop_hpopt/$current_dataset
 mkdir -p $log_dir
+mkdir -p $results_dir
+mkdir -p $RAY_TEMP_DIR
 
 mv slurm_logs/chemprop_hpopt/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $log_dir
 mv slurm_logs/chemprop_hpopt/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err $log_dir
@@ -37,9 +35,7 @@ mv slurm_logs/chemprop_hpopt/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARR
 echo "Loading Conda environment"
 module purge
 module load conda/latest
-source $(conda info --base)/etc/profile.d/conda.sh
 conda activate molml
-python --version
 
 echo "Run hyperparameter search"
 

@@ -86,7 +86,6 @@ pytz==2025.2
 PyYAML==6.0.3
 ray==2.50.1
 rdkit==2025.9.1
-rdkit-pypi==2022.9.5
 referencing==0.37.0
 reportlab==4.4.4
 requests==2.32.5
@@ -111,6 +110,7 @@ typing_extensions==4.14.1
 tzdata==2025.2
 unicodedata2==16.0.0
 urllib3==2.5.0
+umap-learn==0.5.9.post2
 wheel==0.45.1
 xarray==2025.10.1
 yarl==1.22.0

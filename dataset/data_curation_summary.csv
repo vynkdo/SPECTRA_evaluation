@@ -1,6 +1,6 @@
 ,n_beginning,n_invalid,n_replicate,n_filtered_replicate,n_final,percent_positive
 sider,1427,0.0,0.0,0.0,1427.0,56.76
-clintox,1484,6.0,38.0,38.0,1440.0,50.62
+clintox,1484,4.0,38.0,38.0,1440.0,50.62
 bace,1513,0.0,0.0,0.0,1513.0,45.67
 tox21,7831,0.0,0.0,0.0,7831.0,7.75
 bbbp,2050,11.0,124.0,74.0,1965.0,76.34

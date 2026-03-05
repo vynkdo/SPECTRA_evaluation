@@ -14,7 +14,7 @@
 
 project_dir=/home/vndo_umass_edu
 
-datasets=(bace bbbp clintox sider)
+datasets=(delaney freesolv lipo tox21)
 current_dataset=${datasets[$SLURM_ARRAY_TASK_ID]}
 
 echo "Running $current_dataset"

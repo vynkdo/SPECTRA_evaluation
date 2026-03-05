@@ -6,12 +6,27 @@ import pickle
 from lightning import pytorch as pl
 from os.path import join
 from pathlib import Path
+import torch
+import splits
+import os
+import ray
+from ray import tune
+from ray.train.torch import TorchTrainer
+from ray.tune.search.hyperopt import HyperOptSearch
+from ray.tune.schedulers import FIFOScheduler
+from ray.train import CheckpointConfig, RunConfig,ScalingConfig
+from ray.train.lightning import RayDDPStrategy, RayLightningEnvironment, RayTrainReportCallback, prepare_trainer
+import tomllib
 
 def train(molecule_datapoint, task_type, num_tasks, train_indices, test_indices):
     # Define Chemprop Model
+    graph_transform = nn.GraphTransform(
+        V_transform=torch.nn.Identity(),
+        E_transform=torch.nn.Identity()
+    )
     featurizer = featurizers.SimpleMoleculeMolGraphFeaturizer()
-    mp = nn.BondMessagePassing()
-    agg = nn.MeanAggregation()
+    mp = nn.BondMessagePassing(graph_transform=graph_transform)
+    agg = nn.NormAggregation()
     batch_norm = False
 
     if task_type == 'classification':
@@ -28,7 +43,7 @@ def train(molecule_datapoint, task_type, num_tasks, train_indices, test_indices)
         enable_checkpointing=True,
         enable_progress_bar=True,
         accelerator="auto",
-        max_epochs=20)
+        max_epochs=50)
 
     train_dset = data.MoleculeDataset([molecule_datapoint[j] for j in train_indices], featurizer=featurizer)
     test_dset = data.MoleculeDataset([molecule_datapoint[j] for j in test_indices], featurizer=featurizer)
@@ -60,7 +75,7 @@ def metrics_to_csv(csv_path, results, row_name):
         df = row
     df.to_csv(csv_path)
 
-def chemprop(dataset_name, split_type, base_path, task_type):
+def chemprop(dataset_name, split_type, base_path, task_type, config):
     # Load Dataset
     df = pd.read_csv(f'{base_path}/dataset/curated_dataset/{dataset_name}.csv')
     smis = df.loc[:, 'smiles'].values
@@ -69,7 +84,7 @@ def chemprop(dataset_name, split_type, base_path, task_type):
     all_data = [data.MoleculeDatapoint.from_smi(smi, y) for smi, y in zip(smis, ys)]
 
     # Save Directory
-    dir = f'metrics/train/{split_type}'
+    dir = f'metrics/chemprop/{split_type}'
     output = Path(base_path) / dir
     output.mkdir(parents=True, exist_ok=True)
     filename = f'{dataset_name}_{split_type}_metrics.csv'
@@ -80,7 +95,7 @@ def chemprop(dataset_name, split_type, base_path, task_type):
         root = Path(base_path) / "splits" / split_type / f"{dataset_name}_SPECTRA_splits"
         for parameter in range(21):
             parameter = f'{parameter/20:.2f}'
-            for i in range(3):
+            for i in range(1):
                 sp_dir = root / f"SP_{parameter}_{i}"
                 train_file = sp_dir / "train.pkl"
                 test_file = sp_dir / "test.pkl"
@@ -95,14 +110,14 @@ def chemprop(dataset_name, split_type, base_path, task_type):
                 with stats_file.open("rb") as f:
                     stat_info = pickle.load(f)
 
-                results = train(all_data, task_type, num_tasks, train_indices, train_indices)
+                results = train(all_data, task_type, num_tasks, train_indices, test_indices,config)
                 merge = {**stat_info, **results[0]}
                 metrics_to_csv(csv_path, merge, f'{dataset_name}_{split_type}_{parameter}_{i}')
                 print(f'Done with {dataset_name}_{split_type}_{parameter}_{i}')
         print(f'Complete {dataset_name}_{split_type}')
     else:
         print(f'Starting with {dataset_name}_{split_type}')
-        for i in range(1,5):
+        for i in range(1):
             with open(join(base_path,
                            f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
                       'rb') as f:
@@ -113,7 +128,7 @@ def chemprop(dataset_name, split_type, base_path, task_type):
                       'rb') as f:
                 test_indices = pickle.load(f)
 
-            results = train(all_data, task_type, num_tasks, train_indices, test_indices)
+            results = train(all_data, task_type, num_tasks, train_indices, test_indices,config)
 
             metrics_to_csv(csv_path, results, f'{dataset_name}_{split_type}_{i}')
             print(f'Done with {dataset_name}_{split_type}_{i}')
@@ -121,9 +136,12 @@ def chemprop(dataset_name, split_type, base_path, task_type):
     return None
 
 if __name__ == '__main__':
-    classification_datasets = ['hiv']
-    regression_datasets = ['delaney']
-    split_types = ['umap']
+    classification_datasets = ['tox21'] 
+    regression_datasets = []
+    split_types = ['spectra_tanimoto']
+    base_path = "/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies"
+    # with open(f'{base_path}/chemprop_hpopt/clintox/best_config.toml', "rb") as f:  # note: open in binary mode
+    #     config = tomllib.load(f)
     for dataset in classification_datasets:
         for split_type in split_types:
-            chemprop(dataset,split_type,'/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies','classification')
+             chemprop(dataset,split_type,base_path,'classification')

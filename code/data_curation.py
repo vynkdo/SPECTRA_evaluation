@@ -25,10 +25,14 @@ def invalid_mol_filter(base_path, dataset_name):
 
     n_invalid = 0
     index_invalid = []
+    invalid_mol = []
+    invalid_smiles = []
 
     for i in range(n_beginning):
         mol = Chem.MolFromSmiles(dataset_smiles[i])
         if mol == None:
+            invalid_mol.append(mol)
+            invalid_smiles.append(dataset_smiles[i])
             n_invalid += 1
             index_invalid.append(i)
 
@@ -39,7 +43,19 @@ def invalid_mol_filter(base_path, dataset_name):
 
     os.makedirs(f'{base_path}/filtered_invalid/', exist_ok=True)
     filtered_dataset.to_csv(f'{base_path}/filtered_invalid/{dataset_name}.csv', index=False)
-    return filtered_dataset
+
+    os.makedirs(f'{base_path}/{dataset_name}/', exist_ok=True)
+
+    index_file = f'{base_path}/{dataset_name}/{dataset_name}_invalid_indices.csv'
+    pd.DataFrame({'invalid_index': index_invalid}).to_csv(index_file, index=False)
+
+    mol_file = f'{base_path}/{dataset_name}/{dataset_name}_invalid_mol.csv'
+    pd.DataFrame({'invalid_mol': invalid_mol}).to_csv(mol_file, index=False)
+
+    smiles_file = f'{base_path}/{dataset_name}/{dataset_name}_invalid_smiles.csv'
+    pd.DataFrame({'invalid_smiles': invalid_smiles}).to_csv(smiles_file, index=False)
+
+    return invalid_mol, index_invalid, index_invalid
 
 def drop_replicate(base_path, dataset_name, task):
     dataset = pd.read_csv(f'{base_path}/filtered_invalid/{dataset_name}.csv')
@@ -47,6 +63,8 @@ def drop_replicate(base_path, dataset_name, task):
     replicate_index = dataset.index[dataset['canonical_smiles'].duplicated(keep=False)]
     n_replicate = len(replicate_index)
     label = dataset.columns.drop(['canonical_smiles', 'smiles']).to_list()
+
+    os.makedirs(f'{base_path}/{dataset_name}/', exist_ok=True)
 
     to_drop = []
     for idx1 in replicate_index:
@@ -72,6 +90,12 @@ def drop_replicate(base_path, dataset_name, task):
     n_filtered_replicate = len(to_drop)
     drop_replicate_dataset = dataset.drop(to_drop, axis=0).drop(['canonical_smiles'], axis=1)
     n_final = len(drop_replicate_dataset)
+    
+    replicate_indices_file = f'{base_path}/{dataset_name}/{dataset_name}_replicate_indices.csv'
+    pd.DataFrame({'replicate_index': replicate_index}).to_csv(replicate_indices_file, index=False)
+
+    to_drop_indices_file = f'{base_path}/{dataset_name}/{dataset_name}_to_drop_indices.csv'
+    pd.DataFrame({'to_drop_index': to_drop}).to_csv(to_drop_indices_file, index=False)
 
     csv_path = f'{base_path}/data_curation_summary.csv'
     os.makedirs(f'{base_path}/curated_dataset/', exist_ok=True)

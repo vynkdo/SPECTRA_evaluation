@@ -10,6 +10,8 @@ from tqdm import tqdm
 from os.path import join
 import pickle
 from pathlib import Path
+import argparse
+
 
 class MolnetDataset(SpectraDataset):
   def parse(self, dataset):
@@ -59,6 +61,7 @@ def convert_to_morgan_fingerprint(dataset_name, base_path):
   mfp = []
   for i in range(len(dataset_smiles)):
     mol = Chem.MolFromSmiles(dataset_smiles[i])
+    print(i)
     fp = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=1024).GetFingerprint(mol)
     mfp.append(fp)
 
@@ -71,7 +74,7 @@ def generate_spectra_tanimoto_splits(dataset_name, spectra_parameters, base_path
 
   spectra_dataset = MolnetDataset(mfp, f'{dataset_name}')
   tanimoto_spectra = MolnetTanimotoSpectra(spectra_dataset, binary=False)
-  tanimoto_spectra.pre_calculate_spectra_properties(f'{dataset_name}', force_recalculate = False)
+  tanimoto_spectra.pre_calculate_spectra_properties(f'{dataset_name}', force_recalculate=False)
   tanimoto_spectra.generate_spectra_splits(**spectra_parameters)
 
   stats = tanimoto_spectra.return_all_split_stats()
@@ -96,19 +99,24 @@ def generate_spectra_hamming_splits(dataset_name, spectra_parameters, base_path)
 
 def random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path):
   mfp = convert_to_morgan_fingerprint(dataset_name, base_path)
+  print(len(mfp))
   for i in range(5):
     with open(join(base_path,
                  f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
             'rb') as f:
       train_indices = pickle.load(f)
+      print(train_indices)
 
     with open(join(base_path,
                  f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
             'rb') as f:
       test_indices = pickle.load(f)
+      print(test_indices)
 
-    train = [mfp[m] for m in train_indices]
-    test = [mfp[n] for n in test_indices]
+    train = [int(mfp[m]) for m in train_indices]
+    print(len(train))
+    test = [int(mfp[n]) for n in test_indices]
+    print(len(test))
 
     average_similarity = []
     for train_mfp in train:
@@ -136,14 +144,16 @@ def random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path
   return print(f'Done with {dataset_name}_{split_type}')
 
 if __name__ == "__main__":
-    datasets = ['bbbp', 'clintox', 'delaney', 'sider']
-    split_types = ['random','scaffold','umap']
+    parser = argparse.ArgumentParser(description = 'Run SPECTRA Taniomoto Splits')
+    parser.add_argument('--dataset_name', type =str, required=True)
+    parser.add_argument('--base_path', type=str, required=True)
+    parser.add_argument('--split_type', type=str, required=True )
+    args = parser.parse_args()
     spectra_parameters = {'number_repeats': 3,
                           'random_seed': [42, 44, 46],
                           'spectral_parameters': ["{:.2f}".format(i) for i in np.arange(0, 1.05, 0.05)],
-                          'force_reconstruct': True,
+                          'force_reconstruct':False,
                           }
-    base_path = '/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies'
-    for dataset_name in datasets:
-      for split_type in split_types:
-        random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path)
+    
+    random_scaffold_umap_cross_split_overlap(args.dataset_name, args.split_type, args.base_path)
+ 

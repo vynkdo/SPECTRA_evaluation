@@ -1,4 +1,5 @@
 import deepchem as dc
+import numpy as np
 import pandas as pd
 from rdkit import Chem
 from rdkit.Chem import rdFingerprintGenerator
@@ -8,6 +9,7 @@ from pathlib import Path
 import pickle 
 from os.path import join
 import argparse
+import random
 
 def hpopt_random_split(base_path, dataset_name):
     df = pd.read_csv(f'{base_path}/dataset/curated_dataset/{dataset_name}.csv')
@@ -51,7 +53,7 @@ def chemprop_data(base_path, dataset_name, split_type):
     df = pd.read_csv(f'{base_path}/dataset/curated_dataset/{dataset_name}.csv')
     save_dir = f'{base_path}/splits_data/chemprop_data/{split_type}/{dataset_name}'
     os.makedirs(save_dir, exist_ok=True)
-    if split_type in ['spectra_tanimoto','spectra_hamming','inverse_spectra_hamming']:
+    if split_type in ['spectra_tanimoto']:
         print(f'Starting with {dataset_name}_{split_type}')
         root = Path(base_path) / "splits" / split_type / f"{dataset_name}_SPECTRA_splits"
         for parameter in range(21):
@@ -70,11 +72,15 @@ def chemprop_data(base_path, dataset_name, split_type):
                     train_indices = pickle.load(f)
                 with test_file.open("rb") as f:
                     test_indices =pickle.load(f)
+                val_indices = np.random.choice(train_indices, len(train_indices) // 8, replace=False)
+                val_indices = [int(x) for x in val_indices]
+                train_indices = [int(idx) for idx in train_indices if idx not in val_indices]
+                test_indices = [int(idx) for idx in test_indices]
                 data_dic = [
                             {
                                 'train': train_indices,
-                                'val':[],
-                                'test': test_indices
+                                'val': val_indices,
+                                'test': test_indices,
                             }
                             ]
                 json_str = json.dumps(data_dic)
@@ -88,22 +94,23 @@ def chemprop_data(base_path, dataset_name, split_type):
                            f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
                       'rb') as f:
                 train_indices = pickle.load(f)
-                print(max(train_indices))
             with open(join(base_path,
                            f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
                       'rb') as f:
                 test_indices = pickle.load(f)
-                print(max(test_indices))
-                data_dic = [
+            val_indices = np.random.choice(train_indices, len(train_indices) // 8, replace=False)
+            val_indices = val_indices.tolist()
+            train_indices = [idx for idx in train_indices if idx not in val_indices]
+            data_dic = [
                             {
                                 'train': train_indices,
-                                'val':[],
+                                'val': val_indices,
                                 'test': test_indices
                             }
                             ]
-                json_str = json.dumps(data_dic)
-                with open(f'{save_dir}/data_{i}.json', "w") as f:
-                    f.write(json_str)
+            json_str = json.dumps(data_dic)
+            with open(f'{save_dir}/data_{i}.json', "w") as f:
+                f.write(json_str)
         print(f'Finish {dataset_name}_{split_type}')
 
 if __name__ == '__main__':
@@ -112,6 +119,5 @@ if __name__ == '__main__':
     parser.add_argument('--base_path', type=str, required=True)
     parser.add_argument('--split_type', type=str, required=False)
     args = parser.parse_args()
-
-    hpopt_random_split(args.base_path, args.dataset_name)
+    chemprop_data(args.base_path, args.dataset_name, args.split_type)
     

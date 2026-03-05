@@ -7,6 +7,8 @@ import pandas as pd
 import rdkit.Chem as Chem
 from rdkit.Chem import rdFingerprintGenerator
 from sklearn.cluster import KMeans
+import argparse
+import matplotlib.pyplot as plt
 
 def convert_to_numpy_dataset(dataset_name, base_path):
     df = pd.read_csv(f"{base_path}/dataset/curated_dataset/{dataset_name}.csv")
@@ -18,12 +20,12 @@ def convert_to_numpy_dataset(dataset_name, base_path):
         mfp.append(fp)
 
     numpy_dataset = dc.data.NumpyDataset(y=df.drop(columns='smiles').values, ids=df['smiles'].values, X = mfp)
-    return numpy_dataset, df
+    return numpy_dataset, df, mfp
 
 def generate_random_and_scaffold_splits(dataset_name, base_path):
     splitter_dic = {"random": dc.splits.RandomSplitter,
                     "scaffold": dc.splits.ScaffoldSplitter}
-    dataset, df = convert_to_numpy_dataset(dataset_name, base_path)
+    dataset, df, mfp = convert_to_numpy_dataset(dataset_name, base_path)
 
     for split_type, splitter_type in splitter_dic.items():
         save_dir = os.path.join(base_path, split_type, dataset_name)
@@ -38,10 +40,6 @@ def generate_random_and_scaffold_splits(dataset_name, base_path):
             train_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in train_smiles]
             test_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in test_smiles]
 
-            print(f"train: {train_indices}")
-            print(f"test: {test_indices}")
-            print(len(set(train_indices) & set(test_indices)))
-
             assert len(set(train_indices) & set(test_indices)) == 0
             assert len(set(train_indices + test_indices)) == len(dataset.ids)
 
@@ -55,24 +53,34 @@ def generate_random_and_scaffold_splits(dataset_name, base_path):
     return print("Random and scaffold splits done.")
 
 def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
-    dataset, df = convert_to_numpy_dataset(dataset_name, base_path)
+    dataset, df, mfp = convert_to_numpy_dataset(dataset_name, base_path)
     mfp_dataset = dataset.X
     test_size = round(0.2 * len(mfp_dataset), 0)
 
-    umap_save_dir = os.path.join(base_path, f"umap/{dataset_name}")
+    umap_save_dir = os.path.join(base_path, f"splits/umap/{dataset_name}")
+    umap_save_dir_plot = os.path.join(base_path, f"splits/umap/{dataset_name}/plot")
     os.makedirs(umap_save_dir, exist_ok=True)
+    os.makedirs(umap_save_dir_plot, exist_ok=True)
 
     for index, value in enumerate([42, 43, 44, 45, 46]):
         mfp_umap = umap.UMAP(n_neighbors = 15, n_components = 2, transform_seed = value).fit_transform(mfp_dataset)
         kmeans = KMeans(n_clusters = n_clusters, random_state = value)
         cluster_labels = kmeans.fit_predict(mfp_umap)
 
+        plt.figure(figsize=(6,6))
+        plt.scatter(mfp_umap[:, 0], mfp_umap[:, 1], c=cluster_labels,s=50,alpha=1.0)
+        plt.title(f"{dataset_name} - UMAP embedding {index}")
+        plt.xlabel("UMAP-1")
+        plt.ylabel("UMAP-2")
+        plt.savefig(os.path.join(umap_save_dir_plot, f"{dataset_name}_umap_{index}.png"), dpi=400)
+        plt.close()
+
         cluster_index, counts = np.unique(cluster_labels, return_counts=True)
         difference_list = [abs(test_size - i) for i in counts]
         min_cluster_index = difference_list.index(min(difference_list))
-        umap_test_indices = np.where(cluster_labels == min_cluster_index)[0]
-        umap_train_indices = np.where(cluster_labels != min_cluster_index)[0]
-
+        umap_test_indices = (np.where(cluster_labels == min_cluster_index)[0]).tolist()
+        umap_train_indices = (np.where(cluster_labels != min_cluster_index)[0]).tolist()
+    
         assert len(set(umap_train_indices) & set(umap_test_indices)) == 0
         assert len(set(np.concatenate([umap_train_indices, umap_test_indices]))) == len(mfp_dataset)
 
@@ -81,11 +89,12 @@ def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
 
         with open(os.path.join(umap_save_dir, f"{dataset_name}_umap_test_split_{index}.pkl"), "wb") as f:
                 pickle.dump(umap_test_indices, f)
-    return print("UMAP splits done.")
+    return print(f"UMAP splits {dataset_name} done.")
 
 if __name__ == "__main__":
-    datasets = ['bbbp','clintox','delaney','sider']
-    base_path = "/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies"
-
-    for dataset in datasets:
-        generate_umap_splits(dataset, base_path)
+    parser = argparse.ArgumentParser(description='Create Splits CSV for Chemprop hyperparameter search and retraining')
+    parser.add_argument('--dataset_name', type=str, required=True)
+    parser.add_argument('--base_path', type=str, required=True)
+    args = parser.parse_args()
+    generate_random_and_scaffold_splits(args.dataset_name, args.base_path)
+    generate_umap_splits(args.dataset_name, args.base_path)

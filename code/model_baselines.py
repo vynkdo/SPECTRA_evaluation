@@ -1,6 +1,5 @@
 import os
-import glob
-import pickle
+import json
 import pandas as pd
 import numpy as np
 
@@ -9,7 +8,6 @@ from rdkit.Chem import rdFingerprintGenerator
 from rdkit import RDLogger # tragic that this is the best way
 
 import matplotlib.pyplot as plt
-from sklearn import svm
 
 from sklearn.linear_model import LogisticRegression, Lasso # Linear model
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -20,7 +18,7 @@ from sklearn.kernel_ridge import KernelRidge
 from sklearn.metrics import accuracy_score, roc_auc_score, root_mean_squared_error
 
 
-SPLIT_DIR = "../splits/"
+SPLIT_DIR = "../splits_data/chemprop_data/"
 DATASET_DIR = "../dataset/curated_dataset"
 
 # Suppress warning messages, because they're unfixable
@@ -53,15 +51,14 @@ def load_dataset(dataset):
 
 def load_split_indices_non_spectra(dataset, split_type, split_num):
     # get the indices of train vs test
-    train_fn = dataset + "_" + split_type + "_train_split_" + str(split_num) + ".pkl"
-    test_fn = dataset + "_" + split_type + "_test_split_" + str(split_num) + ".pkl"
-    train_path = os.path.join(SPLIT_DIR, split_type, dataset, train_fn)
-    test_path = os.path.join(SPLIT_DIR, split_type, dataset, test_fn)
+    fn = f"data_{split_num}.json"
+    data_path = os.path.join(SPLIT_DIR, split_type, dataset, fn)
 
-    with open(train_path, "rb") as f:
-        train_indices = pickle.load(f)
-    with open(test_path, "rb") as f:
-        test_indices = pickle.load(f)
+    with open(data_path, "rb") as f:
+        indices = json.load(f)
+
+    train_indices = indices[0]["train"]
+    test_indices = indices[0]["test"]
 
     return train_indices, test_indices
 
@@ -120,10 +117,9 @@ def evaluate_model(model, X_test, y_test):
 
 def run_pipeline():
     dataset_model_dict = {
-        "bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
+        #"bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
         #"bbbp": ["LogReg", "RF", "XGB", "SVM"], # binary classification
-        # TODO fix clintox n samples?
-        #"clintox": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
+        "clintox": ["RF"], # multitask binary classification
         # TODO fix metric reporting for regression tasks
         # TODO add F1, ROC AUC metrics instead of just accuracy
         #"delaney": ["LinReg", "RF", "XGB", "KRR"], # regression
@@ -155,6 +151,7 @@ def run_pipeline():
                     print(f"Running for model {model_name}")
                     model = models[model_name]
                     model.fit(X_train, y_train)
+                    # TODO update metrics
                     metrics = {} #evaluate_model(model, X_test, y_test)
 
                     result = {
@@ -184,5 +181,4 @@ if __name__ == "__main__":
     # For all datasets, I checked distribution of y values
     # especially for regression, to see if normalization was needed
     # It seemed that log normalization was already applied where necessary
-
     run_pipeline()

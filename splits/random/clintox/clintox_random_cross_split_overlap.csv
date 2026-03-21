@@ -1,7 +1,0 @@
-,train_size,test_size,cross_split_overlap
-clintox_random_0,1151,289,0.0968981990120081
-clintox_random_1,1151,289,0.0969330562164899
-clintox_random_2,1151,289,0.0974339703671385
-clintox_random_3,1151,289,0.0967494797287479
-clintox_random_4,1151,289,0.0951693564537519
-

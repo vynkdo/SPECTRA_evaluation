@@ -100,36 +100,54 @@ def build_models():
     }
 
 
-def evaluate_model(model, X_test, y_test):
+def evaluate_model(model, metrics, X_test, y_test):
     """Compute evaluation metrics."""
     preds = model.predict(X_test)
 
-    metrics = {
-        "accuracy": accuracy_score(y_test, preds)
+    metric_dict = {
+        j: 0 for j in metrics
     }
 
-    if hasattr(model, "predict_proba"):
-        probs = model.predict_proba(X_test)[:, 1]
-        metrics["roc_auc"] = roc_auc_score(y_test, probs)
+    for metric in metrics:
+        if metric == "accuracy":
+            metric_dict[metric] = accuracy_score(y_test, preds)
+        if metric == "roc_auc":
+            try:
+                probs = model.predict_proba(X_test)[:, 1]
+            except AttributeError: # TODO this is a horrible way to solve this problem
+                probs = model.decision_function(X_test)
+            metric_dict[metric] = roc_auc_score(y_test, probs)
+        if metric == "root_mean_squared_error":
+            metric_dict[metric] = root_mean_squared_error(y_test, preds)
 
-    return metrics
+    return metric_dict
 
 
 def run_pipeline():
     dataset_model_dict = {
-        #"bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
-        #"bbbp": ["LogReg", "RF", "XGB", "SVM"], # binary classification
-        "clintox": ["RF"], # multitask binary classification
+        "bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
+        "bbbp": ["LogReg", "RF", "XGB", "SVM"], # binary classification
+        #"clintox": ["RF"], # multitask binary classification
         # TODO fix metric reporting for regression tasks
         # TODO add F1, ROC AUC metrics instead of just accuracy
-        #"delaney": ["LinReg", "RF", "XGB", "KRR"], # regression
-        #"freesolv": ["LinReg", "RF", "XGB", "KRR"], # regression
-        #"lipo": ["LinReg", "RF", "XGB", "KRR"], # regression
+        # fix regression with RF/XGB/KRR??
+        #"delaney": ["KRR", "LinReg"], # regression
+        #"freesolv": ["KRR", "LinReg"], # regression
+        #"lipo": ["KRR", "LinReg"], # regression
         # TODO fix metric reporting for multitask tasks
         # TODO see if we can get logreg (no longer implemented by deepchem)
         # TODO or XGB/variant or SVM/variant working too
         #"sider": ["RF"], # multitask binary classification
         #"tox21": ["RF"] # multitask binary classification
+    }
+
+    model_metrics = {
+        "LogReg": ["roc_auc"],
+        "LinReg": ["root_mean_squared_error"],
+        "RF": ["roc_auc", "root_mean_squared_error"],
+        "XGB": ["roc_auc", "root_mean_squared_error"],
+        "SVM": ["roc_auc", "root_mean_squared_error"],
+        "KRR": ["root_mean_squared_error"] # accuracy, roc for binary?
     }
 
     split_types = ["random", "scaffold", "umap"]
@@ -152,7 +170,7 @@ def run_pipeline():
                     model = models[model_name]
                     model.fit(X_train, y_train)
                     # TODO update metrics
-                    metrics = {} #evaluate_model(model, X_test, y_test)
+                    metrics = evaluate_model(model, model_metrics[model_name], X_test, y_test)
 
                     result = {
                         "dataset": dataset,
@@ -170,6 +188,7 @@ def run_pipeline():
 
     print("\nResults per split:")
     print(results_df)
+    results_df.to_csv("../statistical_analyses/baselines2.csv", index=False)
 
     print("\nAverage performance:")
     print(results_df.groupby("model").mean(numeric_only=True))

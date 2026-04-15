@@ -77,17 +77,18 @@ def build_models():
     # except for the linear regression
     # which for some reason was not included
     # in their paper at all.
-
     logreg_lasso = LogisticRegression(
         penalty="l1", # LASSO
-        solver="saga"
+        solver="saga",
+        max_iter=1500
     )
     linreg_lasso = Lasso()
 
     random_forest = RandomForestClassifier()
+
     xgb = GradientBoostingClassifier()
 
-    svm = SVC(kernel="rbf")
+    svm = SVC(kernel="rbf",probability=True)
     krr = KernelRidge(kernel="rbf")
 
     return {
@@ -112,10 +113,7 @@ def evaluate_model(model, metrics, X_test, y_test):
         if metric == "accuracy":
             metric_dict[metric] = accuracy_score(y_test, preds)
         if metric == "roc_auc":
-            try:
-                probs = model.predict_proba(X_test)[:, 1]
-            except AttributeError: # TODO this is a horrible way to solve this problem
-                probs = model.decision_function(X_test)
+            probs = model.predict_proba(X_test)[:, 1]
             metric_dict[metric] = roc_auc_score(y_test, probs)
         if metric == "root_mean_squared_error":
             metric_dict[metric] = root_mean_squared_error(y_test, preds)
@@ -124,37 +122,52 @@ def evaluate_model(model, metrics, X_test, y_test):
 
 
 def run_pipeline():
+    # TODO if we want to optimize hyperparameters: https://scikit-learn.org/stable/modules/grid_search.html
+    # warning: the pipeline takes ~3.5 hrs to run at this point,
+    # the MT models are very slow
     dataset_model_dict = {
         "bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
         "bbbp": ["LogReg", "RF", "XGB", "SVM"], # binary classification
-        #"clintox": ["RF"], # multitask binary classification
         # TODO fix metric reporting for regression tasks
         # TODO add F1, ROC AUC metrics instead of just accuracy
         # fix regression with RF/XGB/KRR??
-        #"delaney": ["KRR", "LinReg"], # regression
-        #"freesolv": ["KRR", "LinReg"], # regression
-        #"lipo": ["KRR", "LinReg"], # regression
+        "delaney": ["KRR", "LinReg"], # regression
+        "freesolv": ["KRR", "LinReg"], # regression
+        "lipo": ["KRR", "LinReg"], # regression
         # TODO fix metric reporting for multitask tasks
         # TODO see if we can get logreg (no longer implemented by deepchem)
         # TODO or XGB/variant or SVM/variant working too
-        #"sider": ["RF"], # multitask binary classification
-        #"tox21": ["RF"] # multitask binary classification
+        "clintox": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
+        "sider": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
+        "tox21": ["LogReg", "RF", "XGB", "SVM"] # multitask binary classification
+    }
+
+    dataset_task_num_dict = {
+        "bace": 1,
+        "bbbp": 1,
+        "delaney": 1,
+        "freesolv": 1,
+        "lipo": 1,
+        "clintox": 2,
+        "sider": 27,
+        "tox21": 12
     }
 
     model_metrics = {
         "LogReg": ["roc_auc"],
         "LinReg": ["root_mean_squared_error"],
         "RF": ["roc_auc", "root_mean_squared_error"],
+        "RF_MT": ["roc_auc_mt"],
         "XGB": ["roc_auc", "root_mean_squared_error"],
         "SVM": ["roc_auc", "root_mean_squared_error"],
         "KRR": ["root_mean_squared_error"] # accuracy, roc for binary?
     }
 
     split_types = ["random", "scaffold", "umap"]
-    models = build_models()
     results = []
 
     for dataset in dataset_model_dict.keys():
+        models = build_models()
         for split_type in split_types:
             for split_num in range(5):
                 X_train, X_test, y_train, y_test = load_split(dataset, split_type, split_num)
@@ -168,9 +181,25 @@ def run_pipeline():
                 for model_name in dataset_model_dict[dataset]:
                     print(f"Running for model {model_name}")
                     model = models[model_name]
-                    model.fit(X_train, y_train)
-                    # TODO update metrics
-                    metrics = evaluate_model(model, model_metrics[model_name], X_test, y_test)
+
+                    if dataset_task_num_dict[dataset] == 1:
+                        model.fit(X_train, y_train)
+                        # TODO update metrics
+                        metrics = evaluate_model(model, model_metrics[model_name], X_test, y_test)
+                    else: # multitask model, make sure to get rid of missing values
+                        metrics = {
+                            j: [] for j in model_metrics[model_name]
+                        }
+                        for col_ix in range(y_train.shape[1]):
+                            mask_train = ~np.isnan(y_train[:, col_ix])
+                            model.fit(X_train[mask_train,:], y_train[mask_train, col_ix])
+
+                            mask_test = ~np.isnan(y_test[:, col_ix])
+                            tmp_metrics = evaluate_model(model, model_metrics[model_name],
+                                                         X_test[mask_test,:], y_test[mask_test, col_ix])
+                            for m in model_metrics[model_name]:
+                                metrics[m].append(tmp_metrics[m])
+                        metrics = {k: sum(v)/len(v) for k, v in metrics.items()}
 
                     result = {
                         "dataset": dataset,
@@ -186,9 +215,7 @@ def run_pipeline():
 
     results_df = pd.DataFrame(results)
 
-    print("\nResults per split:")
-    print(results_df)
-    results_df.to_csv("../statistical_analyses/baselines2.csv", index=False)
+    results_df.to_csv("../statistical_analyses/classical_baselines.csv", index=False)
 
     print("\nAverage performance:")
     print(results_df.groupby("model").mean(numeric_only=True))

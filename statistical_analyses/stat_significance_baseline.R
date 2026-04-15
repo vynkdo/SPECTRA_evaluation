@@ -1,13 +1,31 @@
 library(readxl)
-library(ggpubr)
 library(tidyr)
 library(reshape)
+source("./plot_helper_func.R")
 
-df <- data.frame(read_excel("./rsu_ensemble.xlsx", 
-                                     sheet = "baselines_mr",
+classical_df <- data.frame(read_excel("./rsu_ensemble.xlsx", 
+                                     sheet = "classical_baselines",
                                      col_types=c("text", "text", 
                                      "numeric", "text", "numeric")))
+head(classical_df)
+classical_df$ensemble <- NA
+
+chemprop_df <- data.frame(read_excel("./rsu_ensemble.xlsx", 
+                                     sheet = "random_scaffold_umap",
+                                     col_types=c("text", "numeric", "numeric", "numeric",
+                                                 "numeric", "numeric")))
+head(chemprop_df)
+
+chemprop_df <- data.frame(chemprop_df %>% pivot_longer( 
+  cols=c("random", "scaffold", "umap"), 
+  names_to="split_type", values_to="metric"))
+
+head(chemprop_df)
+chemprop_df$model = "chemprop"
+
+df <- rbind(chemprop_df, classical_df)
 head(df)
+
 
 regression_tasks = c("freesolv","lipo","delaney")
 
@@ -17,79 +35,19 @@ comparisons <- list(
   c("scaffold", "umap")
 )
 
-regression_tasks = c("freesolv","lipo","delaney")
 
-
-for (model in c("LogReg", "RF", "XGB", "SVM")) { #classification models
+for (model in c("LogReg", "RF", "XGB", "SVM", "chemprop")) { #classification models
   df_model = df[which(df$model == model),]
-
-  p_classification <- ggboxplot(
-    df_model,
-    x = "split_type",
-    y = "metric",
-    fill = "split_type",
-    # palette = "npg", # remove default palette
-    width = 0.5,
-    outlier.shape = NA
-  ) +
-    scale_fill_manual(
-      values=c("orange","green4","red")
-    ) +
-    stat_compare_means(
-      comparisons = comparisons,
-      method = "wilcox.test",
-      paired = FALSE,
-      label = "p.signif",
-      step.increase = 0.1
-    ) +
-    labs(
-      x = "Split Type",
-      y = "ROC AUC"
-    ) +
-    ggtitle(paste0("Performance: ", model)) + 
-    theme_pubr(base_size = 14) +
-    theme(
-      legend.position = "right",
-      axis.title = element_text(face = "bold")
-    ) + facet_wrap(~dataset) 
-  
-  print(p_classification)
+  if (length(which(df_model$dataset %in% regression_tasks)) > 0) {
+    df_model = df_model[-which(df_model$dataset %in% regression_tasks),]
+  }
+  create_plot(df_model, model,"AUC", my_colors)
 }
 
 
 
-for (model in c("LinReg", "KRR")) { #regression models
+for (model in c("LinReg", "KRR", "chemprop")) { #regression models
   df_model = df[which(df$model == model),]
-  tmp_df = df_model[which(df_model$dataset %in% regression_tasks),]
-  p_regression <- ggboxplot(
-    tmp_df,
-    x = "split_type",
-    y = "metric",
-    fill = "split_type",
-    # palette = "npg", # remove default palette
-    width = 0.5,
-    outlier.shape = NA
-  ) +
-    scale_fill_manual(
-      values=c("orange","green4","red")
-    ) +
-    stat_compare_means(
-      comparisons = comparisons,
-      method = "wilcox.test",
-      paired = FALSE,
-      label = "p.signif",
-      step.increase = 0.1
-    ) +
-    labs(
-      x = "Split Type",
-      y = "RMSE"
-    ) +
-    ggtitle(paste0("Performance: ", model)) + 
-    theme_pubr(base_size = 14) +
-    theme(
-      legend.position = "right",
-      axis.title = element_text(face = "bold")
-    ) + facet_wrap(~dataset, scales="free_y") # bc RMSE on diff scale
-  
-  print(p_regression)
+  df_model = df_model[which(df_model$dataset %in% regression_tasks),]
+  create_plot(df_model, model, "RMSE",my_colors, scales="free_y")
 }

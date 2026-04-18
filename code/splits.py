@@ -92,9 +92,5 @@ def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
     return print(f"UMAP splits {dataset_name} done.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Create Splits CSV for Chemprop hyperparameter search and retraining')
-    parser.add_argument('--dataset_name', type=str, required=True)
-    parser.add_argument('--base_path', type=str, required=True)
-    args = parser.parse_args()
-    generate_random_and_scaffold_splits(args.dataset_name, args.base_path)
-    generate_umap_splits(args.dataset_name, args.base_path)
+    base_path = '/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies/'
+    generate_random_and_scaffold_splits('sider', base_path)

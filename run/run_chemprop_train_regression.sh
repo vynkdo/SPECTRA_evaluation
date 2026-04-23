@@ -73,12 +73,4 @@ chemprop train \
 --metrics rmse \
 --save-dir $results_dir
 
-chemprop predict \
---log $results_dir/test_${CURRENT_DATASET}_${CURRENT_SPLIT}_${CURRENT_NUM}.log \
---test-path $test_path \
---preds-path $results_dir/test_prediction_${CURRENT_DATASET}_${CURRENT_SPLIT}_${CURRENT_NUM}.csv \
---evaluation-methods none \
---calibration-method none \
---model-path  $results_dir
-
 echo "Done $CURRENT_DATASET"

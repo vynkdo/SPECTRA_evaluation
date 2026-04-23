@@ -82,21 +82,6 @@ def generate_spectra_tanimoto_splits(dataset_name, spectra_parameters, base_path
 
   return stats_df
 
-def generate_spectra_hamming_splits(dataset_name, spectra_parameters, base_path):
-  mfp = np.array(convert_to_morgan_fingerprint(dataset_name, base_path))
-  save_dir = f'{base_path}/splits/inverse_spectra_hamming/{dataset_name}'
-  os.makedirs(save_dir, exist_ok=True)
-
-  spectra_dataset = MolnetDataset(mfp, f'{dataset_name}')
-  hamming_spectra = MolnetHammingSpectra(spectra_dataset, binary = False)
-  hamming_spectra.pre_calculate_spectra_properties(f'{dataset_name}', force_recalculate = False)
-  hamming_spectra.generate_spectra_splits(**spectra_parameters)
-
-  stats = hamming_spectra.return_all_split_stats()
-  stats_df = pd.DataFrame(stats).sort_values(by='SPECTRA_parameter', ascending=True)
-
-  return stats_df
-
 def random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path):
   mfp = convert_to_morgan_fingerprint(dataset_name, base_path)
   print(len(mfp))

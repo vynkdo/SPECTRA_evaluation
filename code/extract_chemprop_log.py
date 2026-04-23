@@ -1,4 +1,4 @@
-import re #for searching
+import re 
 import glob
 from pathlib import Path
 import pandas as pd

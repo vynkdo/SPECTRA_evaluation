@@ -3,14 +3,14 @@
 This repository presents a research framework for evaluating chemical data splitting strategies in machine learning and deep learning. We compared state-of-the-art methods including random, scaffold, and UMAP splits by analyzing train–test overlap and its effect on model performance and generalization.
 
 ## **List of subdirectories**
-- dataset: CSV files containing SMILES strings
-- code: code for curating data, generating random, scaffold, UMAP, and SPECTRA splits, calculating cross-split overlap, and organizing splitted data for model training
-- splits_data: cross-split ovelap and split indices for hyperparameter optimization and model training
-- chemprop_hpopt: best Chemprop configuration for each dataset
-- statistical_analyses: code and results for statistical analysis of classical and Chemprop models
-- metrics: performance metrics of Chemprop models
-- run: Shell files for running jobs on Unity clusters
-- plot: figures
+- `dataset`: CSV files containing SMILES strings
+- `code`: code for curating data, generating random, scaffold, UMAP, and SPECTRA splits, calculating cross-split overlap, and organizing splitted data for model training
+- `splits_data`: cross-split ovelap and split indices for hyperparameter optimization and model training
+- `chemprop_hpopt`: best Chemprop configuration for each dataset
+- `statistical_analyses`: code and results for statistical analysis of classical and Chemprop models
+- `metrics`: performance metrics of Chemprop models
+- `run`: Shell files for running jobs on Unity clusters
+- `plot`: figures
 
 
 ## **Installation** 

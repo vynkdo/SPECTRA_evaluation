@@ -8,11 +8,11 @@
 #SBATCH --array=0-6
 #SBATCH --mail-type=TIME_LIMIT_80
 #SBATCH --output=slurm_logs/spectra_splits/%A_%a.out
-#SBATCH --error=slurm_logs/spectra_splits%A_%a.err
+#SBATCH --error=slurm_logs/spectra_splits/%A_%a.err
 
-PROJECT_DIR="/home/vndo_umass_edu"
+PROJECT_DIR="/home/vndo_umass_edu/spectra"
 
-DATASETS=(bace bbbp clintox delaney freesolv lipo sider)
+DATASETS=(clintox)
 CURRENT_DATASET=${DATASETS[$SLURM_ARRAY_TASK_ID]}
 
 echo "-Start SLURM Job-"
@@ -32,6 +32,7 @@ cd $PROJECT_DIR
 echo "Running spectra-splits"
 python -u code/spectra_splits.py \
         --dataset_name $CURRENT_DATASET \
-        --base_path $PROJECT_DIR
+        --base_path $PROJECT_DIR \
+        --split_type 'random'
 
 echo "Finished $CURRENT_DATASET"

@@ -98,9 +98,9 @@ def random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path
       test_indices = pickle.load(f)
       print(test_indices)
 
-    train = [int(mfp[m]) for m in train_indices]
+    train = [mfp[m] for m in train_indices]
     print(len(train))
-    test = [int(mfp[n]) for n in test_indices]
+    test = [mfp[n] for n in test_indices]
     print(len(test))
 
     average_similarity = []

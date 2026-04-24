@@ -3,7 +3,6 @@
 This repository presents a research framework for evaluating chemical data splitting strategies in machine learning and deep learning. We compared state-of-the-art methods including random, scaffold, and UMAP splits by analyzing train–test overlap and its effect on model performance and generalization.
 
 ## **List of subdirectories**
----
 - dataset: CSV files containing SMILES strings
 - code: code for curating data, generating random, scaffold, UMAP, and SPECTRA splits, calculating cross-split overlap, and organizing splitted data for model training
 - splits_data: cross-split ovelap and split indices for hyperparameter optimization and model training
@@ -15,7 +14,6 @@ This repository presents a research framework for evaluating chemical data split
 
 
 ## **Installation** 
----
 The required packages and their versions are provided in `requirements.txt`.  
 
 ```bash
@@ -23,7 +21,6 @@ pip install -r requirements.txt
 ```
 
 ## **Instruction of Running**
----
 ### **1. Generate splits**
 Data in `dataset` was curated to remove invalid SMILES structure and replicates using `code/data_curation.py`. Next, random, scaffold, and UMAP splits were generated using `code/splits.py` and SPECTRA splits were generated using `code/spectra_splits.py`. Cross-split overlaps of all four splitting strategies was calculated during the execution of `code/spectra_splits.py`. All raw SMILES splits were stored as `.pkl` files and then converted to index-based splits stored as `.json` files using `code/chemprop_data.py`. Final index-based splits were stored in `splits_data/chemprop_data` and `splits_data/hpopt`.  
 <br>

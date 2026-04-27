@@ -97,6 +97,3 @@ if __name__ == "__main__":
     parser.add_argument('--base_path', type=str, required=True)
     args = parser.parse_args()
     generate_random_and_scaffold_splits(args.dataset_name, args.base_path)
-
-    
- 

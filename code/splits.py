@@ -3,9 +3,13 @@ import numpy as np
 import os
 import umap.umap_ as umap
 import pickle
+import random
 import pandas as pd
+
 import rdkit.Chem as Chem
 from rdkit.Chem import rdFingerprintGenerator
+from rdkit.Chem.Scaffolds.MurckoScaffold import GetScaffoldForMol
+
 from sklearn.cluster import KMeans
 import argparse
 import matplotlib.pyplot as plt
@@ -22,35 +26,87 @@ def convert_to_numpy_dataset(dataset_name, base_path):
     numpy_dataset = dc.data.NumpyDataset(y=df.drop(columns='smiles').values, ids=df['smiles'].values, X = mfp)
     return numpy_dataset, df, mfp
 
-def generate_random_and_scaffold_splits(dataset_name, base_path):
-    splitter_dic = {"random": dc.splits.RandomSplitter,
-                    "scaffold": dc.splits.ScaffoldSplitter}
+def generate_random_splits(dataset_name, base_path, split_type="random"):
     dataset, df, mfp = convert_to_numpy_dataset(dataset_name, base_path)
 
-    for split_type, splitter_type in splitter_dic.items():
-        save_dir = os.path.join(base_path, split_type, dataset_name)
-        os.makedirs(save_dir, exist_ok=True)
-        splitter = splitter_type()
+    save_dir = os.path.join(base_path, split_type, dataset_name)
+    os.makedirs(save_dir, exist_ok=True)
+    splitter = dc.splits.RandomSplitter()
 
-        for index, value in enumerate([42, 43, 44, 45, 46]):
-            train, test = splitter.train_test_split(dataset, frac_train = 0.8, seed = value)
-            train_smiles = set(train.ids)
-            test_smiles = set(test.ids)
+    for index, value in enumerate([42, 43, 44, 45, 46]):
+        train, test = splitter.train_test_split(dataset, frac_train=0.8, seed=value)
+        train_smiles = set(train.ids)
+        test_smiles = set(test.ids)
 
-            train_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in train_smiles]
-            test_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in test_smiles]
+        train_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in train_smiles]
+        test_indices = [index for index, smiles in enumerate(dataset.ids) if smiles in test_smiles]
 
-            assert len(set(train_indices) & set(test_indices)) == 0
-            assert len(set(train_indices + test_indices)) == len(dataset.ids)
+        assert len(set(train_indices) & set(test_indices)) == 0
+        assert len(set(train_indices + test_indices)) == len(dataset.ids)
 
-            print(f"{dataset_name} split {split_type} {index}")
+        print(f"{dataset_name} split random {index}")
 
-            with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_train_split_{index}.pkl"), "wb") as f:
-                pickle.dump(train_indices, f)
+        with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_train_split_{index}.pkl"), "wb") as f:
+            pickle.dump(train_indices, f)
 
-            with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_test_split_{index}.pkl"), "wb") as f:
-                pickle.dump(test_indices, f)
-    return print("Random and scaffold splits done.")
+        with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_test_split_{index}.pkl"), "wb") as f:
+            pickle.dump(test_indices, f)
+
+
+def generate_scaffold_splits(dataset_name, base_path, split_type="scaffold"):
+    dataset, df, mfp = convert_to_numpy_dataset(dataset_name, base_path)
+
+    # calculate scaffolds from Molecules (deterministic)
+    scaffolds = []
+    for smi in df['smiles']:
+        mol = Chem.MolFromSmiles(smi)
+        scaffolds.append(Chem.MolToSmiles(GetScaffoldForMol(mol)))
+
+    scaffold_to_ix_map = {
+        scaf: [ix for ix, s in enumerate(scaffolds) if s == scaf] for scaf in scaffolds
+    }
+
+    save_dir = os.path.join(base_path, split_type, dataset_name)
+    os.makedirs(save_dir, exist_ok=True)
+
+    for index, value in enumerate([42, 43, 44, 45, 46]):
+        random.seed(value)
+
+        train_prop = 0.8
+        tol = 0.01 # tolerance on proportion away from desired train proportion
+
+        train_indices = []
+        test_indices = []
+
+        while abs((len(train_indices) / len(scaffolds)) - train_prop) > tol:
+            train_indices = []
+            test_indices = []
+            shuffled_unique_scaffolds = random.sample(list(scaffold_to_ix_map.keys()), k=len(scaffold_to_ix_map))
+
+            print((train_prop*df.shape[0]))
+            while len(train_indices) < (train_prop*df.shape[0]):
+                cur_scaf = shuffled_unique_scaffolds.pop(0)
+                train_indices += scaffold_to_ix_map[cur_scaf]
+
+            for remaining_scaffolds in shuffled_unique_scaffolds:
+                test_indices += scaffold_to_ix_map[remaining_scaffolds]
+
+            print(f"Train proportion: {len(train_indices) / len(scaffolds)}")
+            print(f"Test proportion: {len(test_indices) / len(scaffolds)}")
+
+
+        print(f"{dataset_name} split {split_type} {index}")
+
+        assert len(set(train_indices) & set(test_indices)) == 0
+        assert len(set(train_indices + test_indices)) == len(dataset.ids)
+
+        print(test_indices)
+
+        with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_train_split_{index}.pkl"), "wb") as f:
+            pickle.dump(train_indices, f)
+
+        with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_test_split_{index}.pkl"), "wb") as f:
+            pickle.dump(test_indices, f)
 
 def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
     dataset, df, mfp = convert_to_numpy_dataset(dataset_name, base_path)
@@ -89,8 +145,14 @@ def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
 
         with open(os.path.join(umap_save_dir, f"{dataset_name}_umap_test_split_{index}.pkl"), "wb") as f:
                 pickle.dump(umap_test_indices, f)
-    return print(f"UMAP splits {dataset_name} done.")
+    print(f"UMAP splits {dataset_name} done.")
 
 if __name__ == "__main__":
-    base_path = '.' # the main github directory
-    generate_random_and_scaffold_splits('sider', base_path)
+    base_path = '../' # the main github directory
+
+    for dname in ['bace','bbbp','clintox','delaney','freesolv','hiv','lipo','sider','tox21']:
+        pass
+        # Uncomment to re-run all splits; takes time
+        # generate_random_splits(dname, base_path)
+        # generate_scaffold_splits(dname, base_path)
+        # generate_umap_splits(dname, base_path)

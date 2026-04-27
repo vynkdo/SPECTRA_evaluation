@@ -63,11 +63,48 @@ def load_split_indices_non_spectra(dataset, split_type, split_num):
     return train_indices, test_indices
 
 
+def load_split_indices_spectra(dataset, split_type, split_num):
+    # get the indices of train vs test
+    # split_num format for spectra: "0.00_0"
+    split_list = split_num.split("_")
+    fn = f"data_{split_list[1]}.json"
+    data_path = os.path.join(SPLIT_DIR, split_type, dataset, f"SP_{split_list[0]}", fn)
+
+    with open(data_path, "rb") as f:
+        indices = json.load(f)
+
+    train_indices = indices[0]["train"]
+    test_indices = indices[0]["test"]
+
+    return train_indices, test_indices
+
+
 def load_split(dataset, split_type, split_num):
     X, y = load_dataset(dataset)
-    train_indices, test_indices = load_split_indices_non_spectra(dataset, split_type, split_num)
+
+    if split_type == "spectra_tanimoto":
+        train_indices, test_indices = load_split_indices_spectra(dataset, split_type, split_num)
+    else:
+        train_indices, test_indices = load_split_indices_non_spectra(dataset, split_type, split_num)
 
     return X[train_indices,:], X[test_indices,:], y[train_indices,:], y[test_indices,:]
+
+
+def generate_spectra_split_options(dataset):
+    split_options = []
+    for sp_param in [f"0.{i:02}" for i in range(0,100,5)] + ["1.00"]:
+        for i in range(3):
+            fn = f"data_{i}.json"
+            data_path = os.path.join(SPLIT_DIR, "spectra_tanimoto", dataset, f"SP_{sp_param}", fn)
+
+            if os.path.exists(data_path):
+                with open(data_path, "rb") as f:
+                    indices = json.load(f)
+                train_indices = indices[0]["train"]
+                if len(train_indices) >= 16:
+                    split_options.append(f"{sp_param}_{i}")
+    return split_options
+
 
 
 def build_models():
@@ -110,8 +147,6 @@ def evaluate_model(model, metrics, X_test, y_test):
     }
 
     for metric in metrics:
-        if metric == "accuracy":
-            metric_dict[metric] = accuracy_score(y_test, preds)
         if metric == "roc_auc":
             probs = model.predict_proba(X_test)[:, 1]
             metric_dict[metric] = roc_auc_score(y_test, probs)
@@ -122,22 +157,15 @@ def evaluate_model(model, metrics, X_test, y_test):
 
 
 def run_pipeline():
-    # TODO if we want to optimize hyperparameters: https://scikit-learn.org/stable/modules/grid_search.html
     # warning: the pipeline takes ~3.5 hrs to run at this point,
-    # the MT models are very slow
+    # the multitask models are very slow
     dataset_model_dict = {
         "bace": ["LogReg", "RF", "XGB", "SVM"], # binary classification
         "bbbp": ["LogReg", "RF", "XGB", "SVM"], # binary classification
-        # TODO fix metric reporting for regression tasks
-        # TODO add F1, ROC AUC metrics instead of just accuracy
-        # fix regression with RF/XGB/KRR??
         "delaney": ["KRR", "LinReg"], # regression
         "freesolv": ["KRR", "LinReg"], # regression
         "lipo": ["KRR", "LinReg"], # regression
-        # TODO fix metric reporting for multitask tasks
-        # TODO see if we can get logreg (no longer implemented by deepchem)
-        # TODO or XGB/variant or SVM/variant working too
-        "clintox": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
+        #"clintox": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
         "sider": ["LogReg", "RF", "XGB", "SVM"], # multitask binary classification
         "tox21": ["LogReg", "RF", "XGB", "SVM"] # multitask binary classification
     }
@@ -155,21 +183,25 @@ def run_pipeline():
 
     model_metrics = {
         "LogReg": ["roc_auc"],
+        "RF": ["roc_auc"],
+        "XGB": ["roc_auc"],
+        "SVM": ["roc_auc"],
         "LinReg": ["root_mean_squared_error"],
-        "RF": ["roc_auc", "root_mean_squared_error"],
-        "RF_MT": ["roc_auc_mt"],
-        "XGB": ["roc_auc", "root_mean_squared_error"],
-        "SVM": ["roc_auc", "root_mean_squared_error"],
-        "KRR": ["root_mean_squared_error"] # accuracy, roc for binary?
+        "KRR": ["root_mean_squared_error"]
     }
 
-    split_types = ["random", "scaffold", "umap"]
+    split_types = ["spectra_tanimoto"] #, "random", "scaffold", "umap"]
     results = []
 
     for dataset in dataset_model_dict.keys():
+        print(dataset)
         models = build_models()
         for split_type in split_types:
-            for split_num in range(5):
+            split_num_options = list(range(5))
+            if split_type == "spectra_tanimoto":
+                split_num_options = generate_spectra_split_options(dataset)
+                print(split_num_options)
+            for split_num in split_num_options[:2]: # TODO change this back!!
                 X_train, X_test, y_train, y_test = load_split(dataset, split_type, split_num)
 
                 if y_train.shape[1] == 1 and y_test.shape[1] == 1:
@@ -184,7 +216,6 @@ def run_pipeline():
 
                     if dataset_task_num_dict[dataset] == 1:
                         model.fit(X_train, y_train)
-                        # TODO update metrics
                         metrics = evaluate_model(model, model_metrics[model_name], X_test, y_test)
                     else: # multitask model, make sure to get rid of missing values
                         metrics = {
@@ -212,6 +243,12 @@ def run_pipeline():
                     results.append(result)
 
                 print(results)
+
+        results_df_tmp = pd.DataFrame(results)
+        results_df_tmp.to_csv("../statistical_analyses/classical_baselines_tmp.csv",
+                              index=False)
+        print("\nAverage performance (so far):")
+        print(results_df_tmp.groupby("model").mean(numeric_only=True))
 
     results_df = pd.DataFrame(results)
 

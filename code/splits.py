@@ -92,5 +92,5 @@ def generate_umap_splits(dataset_name, base_path, n_clusters = 7):
     return print(f"UMAP splits {dataset_name} done.")
 
 if __name__ == "__main__":
-    base_path = '/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies/'
+    base_path = '.' # the main github directory
     generate_random_and_scaffold_splits('sider', base_path)

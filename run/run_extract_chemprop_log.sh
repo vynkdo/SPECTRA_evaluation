@@ -10,11 +10,21 @@
 #SBATCH --output=slurm_logs/chemprop_train/%A_%a.out
 #SBATCH --error=slurm_logs/chemprop_train/%A_%a.err
 
-PROJECT_DIR="/scratch4/workspace/vndo_umass_edu-simple"
-PATH_TO_LOG="/scratch4/workspace/vndo_umass_edu-simple/chemprop_train/spectra_tanimoto"
+PROJECT_DIR=/scratch4/workspace/vndo_umass_edu-spectra/spectra
 
-DATASETS=(bace bbbp clintox sider delaney freesolv lipo tox21)
-CURRENT_DATASET=${DATASETS[$SLURM_ARRAY_TASK_ID]}
+DATASETS=(bace bbbp clintox sider tox2 sider delaney freesolv)
+SPLITS=(scaffold)
+
+NUM_DATASETS=${#DATASETS[@]}
+NUM_SPLITS=${#SPLITS[@]}
+
+IDX=$SLURM_ARRAY_TASK_ID
+
+dataset_idx=$(( IDX % NUM_DATASETS ))
+split_idx=$(( IDX / NUM_DATASETS ))
+
+CURRENT_DATASET=${DATASETS[$dataset_idx]}
+CURRENT_SPLIT=${SPLITS[$split_idx]}
 
 echo "-Start SLURM Job-"
 echo "Job Array Task ID: $SLURM_ARRAY_TASK_ID"
@@ -32,6 +42,7 @@ cd $PROJECT_DIR
 echo "Running extract_chemprop_log"
 python -u code/extract_chemprop_log.py \
         --dataset_name $CURRENT_DATASET \
-        --path_to_log $PATH_TO_LOG
+        --base_path $PROJECT_DIR \
+        --split_type $CURRENT_SPLIT
 
 echo "Finished $CURRENT_DATASET"

@@ -1,6 +1,6 @@
-,train_size,test_size,cross_split_overlap
-freesolv_scaffold_0,513,129,0.0540317234415884
-freesolv_scaffold_1,513,129,0.0540317234415884
-freesolv_scaffold_2,513,129,0.0540317234415884
-freesolv_scaffold_3,513,129,0.0540317234415884
-freesolv_scaffold_4,513,129,0.05403172344158849
+index,train_size,val_size,test_size,cross_split_overlap
+freesolv_scaffold_0,453,64,125,0.05810004283252717
+freesolv_scaffold_1,455,64,123,0.05604219478674873
+freesolv_scaffold_2,452,64,126,0.05871967581071116
+freesolv_scaffold_3,450,64,128,0.05471271747598466
+freesolv_scaffold_4,454,64,124,0.05472560230158233

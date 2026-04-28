@@ -1,6 +1,6 @@
-,train_size,test_size,cross_split_overlap
-clintox_scaffold_0,1151,289,0.0946626364231766
-clintox_scaffold_1,1151,289,0.0946626364231766
-clintox_scaffold_2,1151,289,0.0946626364231766
-clintox_scaffold_3,1151,289,0.0946626364231766
-clintox_scaffold_4,1151,289,0.09466263642317664
+index,train_size,val_size,test_size,cross_split_overlap
+clintox_scaffold_0,1008,144,288,0.09840111233971721
+clintox_scaffold_1,1008,144,288,0.08212383117444964
+clintox_scaffold_2,1009,144,287,0.09839067831873435
+clintox_scaffold_3,1010,144,286,0.09955313146789908
+clintox_scaffold_4,1021,145,274,0.10021758004590156

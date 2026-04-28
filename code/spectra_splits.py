@@ -43,17 +43,6 @@ class MolnetTanimotoSpectra(Spectra):
         average_similarity.append(self.spectra_properties(i,j))
     return np.mean(average_similarity)
 
-class MolnetHammingSpectra(Spectra):
-  def spectra_properties(self, sample_one, sample_two):
-      return np.sum(sample_one == sample_two)/1024
-
-  def cross_split_overlap(self, train, test):
-    average_similarity = []
-    for i in train:
-      for j in test:
-        average_similarity.append(self.spectra_properties(i,j))
-    return np.mean(average_similarity)
-
 def convert_to_morgan_fingerprint(dataset_name, base_path):
   dataset = pd.read_csv(f'{base_path}/dataset/curated_dataset/{dataset_name}.csv')
   dataset_smiles = dataset['smiles']
@@ -69,7 +58,7 @@ def convert_to_morgan_fingerprint(dataset_name, base_path):
 
 def generate_spectra_tanimoto_splits(dataset_name, spectra_parameters, base_path):
   mfp = convert_to_morgan_fingerprint(dataset_name, base_path)
-  save_dir = f'{base_path}/splits/spectra_tanimoto/{dataset_name}'
+  save_dir = f'{base_path}/raw_splits/spectra_tanimoto/{dataset_name}'
   os.makedirs(save_dir, exist_ok=True)
 
   spectra_dataset = MolnetDataset(mfp, f'{dataset_name}')
@@ -87,13 +76,13 @@ def random_scaffold_umap_cross_split_overlap(dataset_name, split_type, base_path
   print(len(mfp))
   for i in range(5):
     with open(join(base_path,
-                 f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
+                 f'raw_splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
             'rb') as f:
       train_indices = pickle.load(f)
       print(train_indices)
 
     with open(join(base_path,
-                 f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
+                 f'raw_splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
             'rb') as f:
       test_indices = pickle.load(f)
       print(test_indices)

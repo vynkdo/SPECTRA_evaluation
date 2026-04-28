@@ -1,0 +1,6 @@
+,train_size,test_size,cross_split_overlap
+freesolv_random_0,513,129,0.0798989670640681
+freesolv_random_1,513,129,0.0792853458519127
+freesolv_random_2,513,129,0.0803342728625323
+freesolv_random_3,513,129,0.079545100385888
+freesolv_random_4,513,129,0.07861430129515315

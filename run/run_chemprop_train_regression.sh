@@ -40,13 +40,10 @@ best_config_dir=$project_dir/chemprop_hpopt/$CURRENT_DATASET
 results_dir=$project_dir/chemprop_train/$CURRENT_SPLIT/$CURRENT_DATASET
 data_path=$project_dir/dataset/curated_dataset/$CURRENT_DATASET.csv
 splits_path=$project_dir/splits_data/chemprop_data/$CURRENT_SPLIT/$CURRENT_DATASET/data_$CURRENT_NUM.json
-test_path=$project_dir/splits_data/test_data/$CURRENT_SPLIT/$CURRENT_DATASET/data_$CURRENT_NUM.csv
-RAY_TEMP_DIR=$project_dir/ray/ray_temp
 
 log_dir=slurm_logs/chemprop_train/$CURRENT_SPLIT/$CURRENT_DATASET
 mkdir -p $log_dir
 mkdir -p $results_dir
-mkdir -p $RAY_TEMP_DIR
 
 mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $log_dir
 mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err $log_dir

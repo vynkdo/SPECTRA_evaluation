@@ -25,7 +25,7 @@ def hpopt_random_split(base_path, dataset_name):
                                                          seed=42)
     idx_train, idx_valid, idx_test = len(train) - 1, len(train) - 1 + len(valid) - 1, len(dataset) - 1
 
-    save_dir = f'{base_path}/splits_data/hpopt/{dataset_name}'
+    save_dir = f'{base_path}/splits_data/chemprop_hpopt/{dataset_name}'
     os.makedirs(save_dir, exist_ok=True)
     data_dic = [
         {
@@ -55,7 +55,7 @@ def chemprop_data(base_path, dataset_name, split_type):
     os.makedirs(save_dir, exist_ok=True)
     if split_type in ['spectra_tanimoto']:
         print(f'Starting with {dataset_name}_{split_type}')
-        root = Path(base_path) / "splits" / split_type / f"{dataset_name}_SPECTRA_splits"
+        root = Path(base_path) / "raw_splits" / split_type / f"{dataset_name}_SPECTRA_splits"
         for parameter in range(21):
             parameter = f'{parameter/20:.2f}'
             save_sp_dir = f'{save_dir}/SP_{parameter}'
@@ -91,11 +91,11 @@ def chemprop_data(base_path, dataset_name, split_type):
         print(f'Starting with {dataset_name}_{split_type}')
         for i in range(5):
             with open(join(base_path,
-                           f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
+                           f'raw_splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_train_split_{i}.pkl'),
                       'rb') as f:
                 train_indices = pickle.load(f)
             with open(join(base_path,
-                           f'splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
+                           f'raw_splits/{split_type}/{dataset_name}/{dataset_name}_{split_type}_test_split_{i}.pkl'),
                       'rb') as f:
                 test_indices = pickle.load(f)
             val_indices = np.random.choice(train_indices, len(train_indices) // 8, replace=False)

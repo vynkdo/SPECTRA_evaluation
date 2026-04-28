@@ -1,0 +1,6 @@
+index,train_size,val_size,test_size,cross_split_overlap
+freesolv_umap_0,448,63,131,0.06306386235970213
+freesolv_umap_1,452,64,126,0.06447849572554334
+freesolv_umap_2,441,62,139,0.06792787739579789
+freesolv_umap_3,444,63,135,0.06285625931179957
+freesolv_umap_4,444,63,135,0.064023424995019

@@ -5,12 +5,18 @@ import pandas as pd
 import argparse
 import os
 
-def extract_chemprop_log(path_to_log,dataset_name):
+def extract_chemprop_log(base_path, split_type, dataset_name):
     regression = ['delaney','freesolv','lipo']
-    log_files = sorted(glob.glob(f'{path_to_log}/{dataset_name}/train_{dataset_name}_spectra_tanimoto_SP_*.log'))
+    if split_type in ['random', 'scaffold', 'umap']:
+        log_files = sorted(glob.glob(f'{base_path}/chemprop_train/{split_type}/{dataset_name}/train_{dataset_name}_{split_type}_*.log'))
+    elif split_type in ['spectra_tanimoto']:
+        log_files = sorted(glob.glob(f'{base_path}/chemprop_train/{split_type}/{dataset_name}/train_{dataset_name}_{split_type}_SP_*.log'))
     rows = []
     for log_file in log_files:
-        name = Path(log_file).stem[-6:]
+        if split_type in ['random', 'scaffold', 'umap']:
+            name = Path(log_file).stem[6:-4]
+        elif split_type in ['spectra_tanimoto']:
+            name = Path(log_file).stem[-6:]
 
         with open(log_file, "r") as f:
             text = f.read()
@@ -52,12 +58,13 @@ def extract_chemprop_log(path_to_log,dataset_name):
             rows.append(row)
 
     df = pd.DataFrame(rows)
-    os.makedirs(f'{path_to_log}/sheet',exist_ok=True)
-    df.to_excel(f"{path_to_log}/sheet/spectra_ensemble_{dataset_name}.xlsx", index = False)
+    os.makedirs(f'{base_path}/metrics/{split_type}/sheet',exist_ok=True)
+    df.to_csv(f"{base_path}/metrics/{split_type}/sheet/{split_type}_metrics_{dataset_name}.csv", index = False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_name', type=str, required=True)
-    parser.add_argument('--path_to_log', type=str, required=True)
+    parser.add_argument('--base_path', type=str, required=True)
+    parser.add_argument('--split_type', type=str, required=True)
     args = parser.parse_args()
-    extract_chemprop_log(args.path_to_log, args.dataset_name)
+    extract_chemprop_log(args.base_path, args.split_type, args.dataset_name)

@@ -1,6 +1,6 @@
-,train_size,test_size,cross_split_overlap
-delaney_scaffold_0,884,222,0.0736301305326803
-delaney_scaffold_1,884,222,0.0736301305326803
-delaney_scaffold_2,884,222,0.0736301305326803
-delaney_scaffold_3,884,222,0.0736301305326803
-delaney_scaffold_4,884,222,0.07363013053268035
+index,train_size,val_size,test_size,cross_split_overlap
+delaney_scaffold_0,781,111,214,0.0739966697442802
+delaney_scaffold_1,775,110,221,0.07871206497023597
+delaney_scaffold_2,779,111,216,0.0764942294453193
+delaney_scaffold_3,775,110,221,0.07545583486849192
+delaney_scaffold_4,777,110,219,0.07487170998210572

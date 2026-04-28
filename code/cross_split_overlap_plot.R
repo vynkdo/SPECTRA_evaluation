@@ -18,7 +18,7 @@ def load_pickle(path):
 }
 
 load_dataset <- function(dataset_name) {
-  SP_path <- file.path(base_path, "splits_data", "cross_split_overlap","raw_spectra_tanimoto", paste0(dataset_name, "_SPECTRA_splits"))
+  SP_path <- file.path(base_path, "raw_splits", "spectra_tanimoto", paste0(dataset_name, "_SPECTRA_splits"))
   df_list <- list()
   for (p in 0:20) {
     SP <- sprintf("%.2f", p / 20)
@@ -34,8 +34,12 @@ load_dataset <- function(dataset_name) {
   
   avg_df <- df %>%
     group_by(SPECTRA_parameter) %>%
-    summarise(cross_split_overlap = mean(cross_split_overlap), .groups = "drop")
+    summarise(cross_split_overlap_avg = mean(cross_split_overlap),
+              cross_split_overlap_sd = sd(cross_split_overlap))
   
+  output <- file.path(base_path, "splits_data","cross_split_overlap","spectra_tanimoto", paste0(dataset_name, "_spectra_cross_split_overlap.csv"))
+  dir.create(dirname(output))
+  write.csv(avg_df, output)
   avg_df$dataset <- dataset_name
   
   random_df <- read.csv(file.path(base_path, "splits_data/cross_split_overlap/random", paste0(dataset_name, "_random_cross_split_overlap.csv")))
@@ -51,7 +55,7 @@ load_dataset <- function(dataset_name) {
 
 all_data <- bind_rows(lapply(datasets, load_dataset))
 
-p <- ggplot(all_data, aes(x = SPECTRA_parameter, y = cross_split_overlap)) +
+p <- ggplot(all_data, aes(x = SPECTRA_parameter, y = cross_split_overlap_avg)) +
   
   geom_point(aes(color = "SPECTRA"), size = 2) +
   geom_hline(aes(yintercept = random_mean, color = "Random"), linetype = "solid", size = 0.6) +

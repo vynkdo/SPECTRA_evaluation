@@ -1,4 +1,4 @@
-,CSO,AUC,SP,SD
-Random,0.08737,0.836,0.0,0.010
-Scaffold,0.08498,0.758,0.0,0.009
-UMAP,0.07913,0.744,0.0,0.024
+split,cross_split_overlap_avg,cross_split_overlap_sd,AUC,SPECTRA_parameter,SD
+Random,0.08737,0.0002739170188664131,0.836,0.0,0.010
+Scaffold,0.08498,0,0.758,0.0,0.009
+UMAP,0.07913,0.019478240977641424,0.744,0.0,0.024

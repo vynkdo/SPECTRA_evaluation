@@ -1,22 +1,20 @@
 #!/bin/bash
 
-#SBATCH --job-name=chemprop_train
+#SBATCH --job-name=chemprop_train_classification
 #SBATCH --ntasks=1
-#SBATCH -p gpu
 #SBATCH --cpus-per-task=40
-#SBATCH --gpus-per-task=2
-#SBATCH --mem=90G
-#SBATCH --time=24:00:00
-#SBATCH --array=1-21
+#SBATCH --mem=50G
+#SBATCH --time=12:00:00
+#SBATCH --array=1-25
 #SBATCH --mail-type=TIME_LIMIT_80
 #SBATCH --output=slurm_logs/chemprop_train/%x_%A_%a.out
 #SBATCH --error=slurm_logs/chemprop_train/%x_%A_%a.err
 
-project_dir=/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies
+PROJECT_DIR=/home/vndo_umass_edu/spectra
 
-DATASETS=(clintox)
-SPLITS=(random)
-NUMS=(0 1 2)
+DATASETS=(bace bbbp clintox sider tox21)
+SPLITS=(scaffold)
+NUMS=(0 1 2 3 4)
 
 NUM_DATASETS=${#DATASETS[@]}
 NUM_SPLITS=${#SPLITS[@]}
@@ -35,19 +33,18 @@ CURRENT_NUM=${NUMS[$num_idx]}
 
 echo "Running $CURRENT_DATASET"
 
-best_config_dir=$project_dir/chemprop_hpopt/$CURRENT_DATASET
-results_dir=$project_dir/chemprop_train_test/$CURRENT_SPLIT/$CURRENT_DATASET
-data_path=$project_dir/dataset/curated_dataset/$CURRENT_DATASET.csv
-splits_path=$project_dir/splits_data/chemprop_data/$CURRENT_SPLIT/$CURRENT_DATASET/$CURRENT_NUM.json
-RAY_TEMP_DIR=$project_dir/ray/ray_temp
+BEST_CONFIG_DIR=$PROJECT_DIR/chemprop_hpopt/$CURRENT_DATASET
+RESULTS_DIR=$PROJECT_DIR/chemprop_train/$CURRENT_SPLIT/$CURRENT_DATASET
+DATA_PATH=$PROJECT_DIR/dataset/curated_dataset/$CURRENT_DATASET.csv
+SPLITS_PATH=$PROJECT_DIR/splits_data/chemprop_data/$CURRENT_SPLIT/$CURRENT_DATASET/data_$CURRENT_NUM.json
 
-log_dir=slurm_logs/chemprop_train/$CURRENT_SPLIT/$CURRENT_DATASET
-mkdir -p $log_dir
-mkdir -p $results_dir
-mkdir -p $RAY_TEMP_DIR
 
-mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $log_dir
-mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err $log_dir
+LOG_DIR=slurm_logs/chemprop_train/$CURRENT_SPLIT/$CURRENT_DATASET
+mkdir -p $LOG_DIR
+mkdir -p $RESULTS_DIR
+
+mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out $LOG_DIR
+mv slurm_logs/chemprop_train/${SLURM_JOB_NAME}_${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}.err $LOG_DIR
 
 echo "Loading Conda environment"
 module purge
@@ -57,11 +54,11 @@ conda activate molml
 echo "Run chemprop retrain on $CURRENT_DATASET in $CURRENT_SPLIT"
 
 chemprop train \
---log $results_dir/test_${CURRENT_DATASET}_${CURRENT_SPLIT}_${CURRENT_NUM}.log \
+--log $RESULTS_DIR/train_${CURRENT_DATASET}_${CURRENT_SPLIT}_${CURRENT_NUM}.log \
 -t classification \
---config-path $best_config_dir/best_config.toml \
---data-path $data_path \
---splits-file $splits_path \
+--config-path $BEST_CONFIG_DIR/best_config.toml \
+--data-path $DATA_PATH \
+--splits-file $SPLITS_PATH \
 --num-workers 20 \
 --epochs 200 \
 --patience 15 \
@@ -69,6 +66,6 @@ chemprop train \
 --aggregation norm \
 --ensemble-size 5 \
 --metrics roc \
---save-dir $results_dir
+--save-dir $RESULTS_DIR
 
 echo "Done $CURRENT_DATASET"

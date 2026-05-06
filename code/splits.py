@@ -83,7 +83,6 @@ def generate_scaffold_splits(dataset_name, base_path, split_type="scaffold"):
             test_indices = []
             shuffled_unique_scaffolds = random.sample(list(scaffold_to_ix_map.keys()), k=len(scaffold_to_ix_map))
 
-            print((train_prop*df.shape[0]))
             while len(train_indices) < (train_prop*df.shape[0]):
                 cur_scaf = shuffled_unique_scaffolds.pop(0)
                 train_indices += scaffold_to_ix_map[cur_scaf]
@@ -94,13 +93,10 @@ def generate_scaffold_splits(dataset_name, base_path, split_type="scaffold"):
             print(f"Train proportion: {len(train_indices) / len(scaffolds)}")
             print(f"Test proportion: {len(test_indices) / len(scaffolds)}")
 
-
         print(f"{dataset_name} split {split_type} {index}")
 
         assert len(set(train_indices) & set(test_indices)) == 0
         assert len(set(train_indices + test_indices)) == len(dataset.ids)
-
-        print(test_indices)
 
         with open(os.path.join(save_dir, f"{dataset_name}_{split_type}_train_split_{index}.pkl"), "wb") as f:
             pickle.dump(train_indices, f)

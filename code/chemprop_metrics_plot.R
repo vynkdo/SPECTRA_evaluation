@@ -6,7 +6,7 @@ base_path <- "/Users/ivymac/Desktop/SAGE_Lab/data_splitting_strategies"
 
 load_dataset <- function(dataset_name) {
   rsu <- read.csv(file.path(base_path, "metrics", "rsu_classification", paste0(dataset_name, ".csv")))
-  spectra_cso <- read.csv(file.path(base_path, "splits_data", "cross_split_overlap", "spectra_tanimoto", paste0(dataset_name, "_spectra_cross_split_overlap.csv")))
+  spectra_cso <- read.csv(file.path(base_path, "splits_data", "cross_split_overlap", "raw_spectra_tanimoto", "summary", paste0(dataset_name, "_spectra_cross_split_overlap.csv")))
   spectra_metrics <- read.csv(file.path(base_path, "metrics", "spectra_tanimoto", "avg_metrics", paste0(dataset_name, ".csv")))
   
   spectra_df <- merge(spectra_metrics, spectra_cso, by = "SPECTRA_parameter")

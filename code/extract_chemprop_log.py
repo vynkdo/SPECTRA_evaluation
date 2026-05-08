@@ -58,8 +58,8 @@ def extract_chemprop_log(base_path, split_type, dataset_name):
             rows.append(row)
 
     df = pd.DataFrame(rows)
-    os.makedirs(f'{base_path}/metrics/{split_type}/sheet',exist_ok=True)
-    df.to_csv(f"{base_path}/metrics/{split_type}/sheet/{split_type}_metrics_{dataset_name}.csv", index = False)
+    os.makedirs(f'{base_path}/metrics/{split_type}',exist_ok=True)
+    df.to_csv(f"{base_path}/metrics/{split_type}/{split_type}_metrics_{dataset_name}.csv", index = False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
